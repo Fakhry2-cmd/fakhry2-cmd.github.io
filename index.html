@@ -64,6 +64,30 @@ aside .foot i.off{background:#FF8A7E}
 .icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 main{padding:24px 28px 80px;min-width:0;max-width:1440px;width:100%;margin:0 auto}
 .tabs{display:none}
+.fab{display:none}
+.vpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.vchk{position:relative;cursor:pointer}
+.vchk input{position:absolute;opacity:0;pointer-events:none}
+.vchk span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:.86rem;font-weight:500;background:var(--surface);user-select:none}
+.vchk span small{color:var(--muted);font-size:.74rem}
+.vchk input:checked+span{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:700}
+.vchk input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
+.vtab{border:1px solid var(--line);border-radius:12px;padding:2px 12px;margin-top:2px}
+.vr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.vr:first-child{border-top:0}
+.vr label{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);font-weight:600}
+.vr input{width:auto}
+details.more{flex-basis:100%;border-top:1px dashed var(--line);padding-top:6px}
+details.more summary{cursor:pointer;color:var(--brand);font-weight:600;font-size:.85rem;padding:2px 0;list-style-position:inside}
+details.more[open] summary{margin-bottom:8px}
+.qfound{flex-basis:100%;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--ok-bg);border-radius:10px;padding:8px 12px}
+.qfound.new{background:var(--info-bg)}
+.qdyn{display:flex;flex-direction:column;gap:10px}
+.tel{color:inherit;text-decoration:none;border-bottom:1px dashed var(--muted)}
+.icon-btn.bk{position:relative}
+.icon-btn.bk i{display:none;position:absolute;top:7px;inset-inline-end:7px;width:8px;height:8px;border-radius:50%;background:var(--over)}
+.icon-btn.bk.due i{display:block}
+.icon-btn.bk.due{color:var(--over);border-color:color-mix(in srgb,var(--over) 40%,var(--line))}
 @media (min-width:861px){.msearch{display:none}}
 .btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .scrim{display:none}
@@ -84,6 +108,8 @@ main{padding:24px 28px 80px;min-width:0;max-width:1440px;width:100%;margin:0 aut
   .tabs button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;font-weight:600;color:var(--muted);padding:4px 0;position:relative}
   .tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .tabs button.on{color:var(--brand)}
+  .fab{all:unset;cursor:pointer;display:grid;place-items:center;position:fixed;inset-inline-end:16px;bottom:calc(78px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:18px;background:var(--brand-fill);color:#fff;box-shadow:0 8px 20px rgba(217,95,32,.35);z-index:23}
+  .fab svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
   .tabs .b{position:absolute;top:0;inset-inline-start:calc(50% + 6px);font-size:.64rem;background:var(--brand-fill);color:#fff;border-radius:99px;padding:0 5px;min-width:16px;text-align:center;line-height:1.5}
 }
 @media (prefers-reduced-motion:reduce){aside{transition:none}}
@@ -644,7 +670,13 @@ function arm(btn, fn) {
   btn.dataset.armed = '1'; const old = btn.textContent; btn.textContent = 'اضغط للتأكيد'; btn.classList.add('armed');
   setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = old; btn.classList.remove('armed'); } }, 3000);
 }
-function modal(html) { $('#sheet').innerHTML = html; $('#modal').hidden = false; const f = $('#sheet').querySelector('input,select,textarea'); if (f) f.focus(); }
+function modal(html) {
+  $('#sheet').innerHTML = html; $('#modal').hidden = false;
+  const fm = $('#sheet form');
+  if (fm && fm.dataset.form === 'quick') qDyn(fm, true);
+  else if (fm && fm.querySelector('.vrows')) vacRows(fm);
+  const f = $('#sheet').querySelector('input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea'); if (f) f.focus();
+}
 function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; }
 function copy(t) {
   const fb = () => { const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} a.remove(); toast(ok ? 'تم النسخ' : 'تعذّر النسخ، انسخ يدوياً', !ok); };
@@ -689,7 +721,8 @@ function renderNow() {
     '<div class="foot"><i class="' + (storageOK ? '' : 'off') + '"></i>' + (storageOK ? 'البيانات محفوظة على هذا الجهاز' : 'الحفظ غير متاح في هذا المتصفح') + '</div>';
   renderTop();
   $('#tabs').innerHTML = [['home', 'الرئيسية'], ['send', 'أرسل اليوم'], ['appt', 'المواعيد'], ['cust', 'العملاء']].map(([k, l]) => '<button data-go="' + k + '" class="' + (isOn(k) ? 'on' : '') + '">' + ico(k) + '<span>' + l + '</span>' + badge(k) + '</button>').join('') +
-    '<button data-act="drawer" class="' + (['home', 'send', 'appt', 'cust'].indexOf(ui.view) === -1 ? 'on' : '') + '">' + ico('more') + '<span>المزيد</span></button>';
+    '<button data-act="drawer" class="' + (['home', 'send', 'appt', 'cust'].indexOf(ui.view) === -1 ? 'on' : '') + '">' + ico('more') + '<span>المزيد</span></button>' +
+    '<button class="fab" data-act="quick" aria-label="زيارة سريعة">' + ico('plus') + '</button>';
   const V = { send: rSend, cust: rCust, camp: rCamp, card: rCard, pkg: rPkg, imp: rImp, set: rSet, book: rBook, appt: rAppt, rep: rRep, home: rHome, books: rBooks, wa: rWa }[ui.view];
   $('#main').innerHTML = '<div class="page">' + V(si) + '</div>';
   if (ui.view === 'card') drawCard();
@@ -703,7 +736,8 @@ function banners() {
   if (D.sample) h += '<div class="banner"><span><b>بيانات تجريبية.</b> الأسماء والأرقام أمثلة للتجربة فقط.</span><button class="btn sm" data-act="clearAll">مسح كل البيانات والبدء</button></div>';
   const hasData = D.customers.length > 0 && !D.sample;
   const old = !D.lastBackup || daysTo(D.lastBackup.slice(0, 10)) < -7;
-  if (hasData && old) h += '<div class="banner"><span><b>' + (D.lastBackup ? 'آخر نسخة احتياطية قبل أكثر من أسبوع.' : 'ما أخذت نسخة احتياطية للآن.') + '</b> البيانات محفوظة في هذا المتصفح فقط.</span><button class="btn sm gold" data-act="backup">تنزيل نسخة احتياطية</button></div>';
+  const vold = D.lastBackup ? daysTo(D.lastBackup.slice(0, 10)) < -10 : D.customers.length > 20;
+  if (hasData && old) h += '<div class="banner' + (vold ? ' red' : '') + '"><span><b>' + (D.lastBackup ? 'آخر نسخة احتياطية قبل أكثر من أسبوع.' : 'ما أخذت نسخة احتياطية للآن.') + '</b> البيانات محفوظة في هذا المتصفح فقط.</span><button class="btn sm gold" data-act="backup">تنزيل نسخة احتياطية</button></div>';
   return h;
 }
 
@@ -720,10 +754,11 @@ function renderTop() {
     top.dataset.ready = '1';
     top.innerHTML = '<div class="in"><button class="icon-btn menu" data-act="drawer" aria-label="القائمة">' + ico('menu') + '</button><div class="tb-brand"><img alt=""><span></span></div>' +
       '<label class="search"><span hidden>بحث</span>' + ico('search') + '<input id="gq" type="search" placeholder="ابحث باسم العميل أو الحيوان أو الجوال" autocomplete="off"></label>' +
-      '<div class="acts"><button class="btn" data-act="newCust">عميل جديد</button><button class="btn pri" data-act="newAppt">موعد جديد</button><button class="icon-btn" data-act="theme" id="themeBtn"></button></div></div>';
+      '<div class="acts"><button class="btn" data-act="newAppt">موعد جديد</button><button class="btn pri" data-act="quick">' + ico('plus') + 'زيارة سريعة</button><button class="icon-btn bk" data-act="backup" id="bkBtn" title="تنزيل نسخة احتياطية" aria-label="تنزيل نسخة احتياطية">' + ico('imp') + '<i></i></button><button class="icon-btn" data-act="theme" id="themeBtn"></button></div></div>';
   }
   top.querySelector('.tb-brand img').src = logoSrc(); top.querySelector('.tb-brand span').textContent = D.settings.clinic;
   const gq = $('#gq'); if (document.activeElement !== gq) gq.value = ui.view === 'cust' ? ui.q : '';
+  const bkOld = D.customers.length && !D.sample && (!D.lastBackup || daysTo(D.lastBackup.slice(0, 10)) < -7); $('#bkBtn').classList.toggle('due', !!bkOld);
   const dk = curTheme() === 'dark', tb = $('#themeBtn'); tb.innerHTML = ico(dk ? 'sun' : 'moon'); tb.setAttribute('aria-label', dk ? 'الوضع الفاتح' : 'الوضع الداكن'); tb.title = tb.getAttribute('aria-label');
 }
 function setTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem('anamel_theme', t); } catch (e) {} renderTop(); if (ui.view === 'card') drawCard(); }
@@ -757,6 +792,8 @@ function rHome(si) {
     '<div class="q"><div class="big"><b>' + si.items.length + '</b><span>' + (si.items.length ? 'رسالة جاهزة للإرسال اليوم' : 'ما فيه رسائل مستحقة اليوم') + '</span></div>' +
     '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="lim"><span>أُرسل هذا الشهر ' + L.month + '</span><span>الحد ' + st.limit + '</span></div>' +
     '<button class="btn pri" data-go="send"' + (si.items.length ? '' : ' disabled') + '>' + (si.items.length ? 'ابدأ الإرسال' : 'كل شي مرسل') + '</button></div></section>' + banners();
+  const miss = [!st.phone && 'رقم واتساب العيادة', !st.avg && 'متوسط قيمة الزيارة', !st.vet && 'اسم الطبيب الافتراضي'].filter(Boolean);
+  if (miss.length && !D.sample) h += '<div class="banner"><span><b>باقي ' + miss.length + ' من إعدادات البداية:</b> ' + miss.join('، ') + '.</span><button class="btn sm" data-go="set">إكمال الإعدادات</button></div>';
   if (!D.customers.length) {
     return h + '<div class="card empty"><h2 style="justify-content:center">ابدأ بإضافة عملاء العيادة</h2><p>استورد ملف العملاء والحيوانات، أو أضف أول عميل يدوياً. وتقدر تجرب النظام ببيانات تجريبية أول.</p>' +
       '<div class="row" style="justify-content:center"><button class="btn pri" data-go="imp">استيراد ملف</button><button class="btn" data-act="newCust">إضافة عميل</button><button class="btn gh" data-act="sample">تجربة ببيانات تجريبية</button></div></div>';
@@ -783,7 +820,7 @@ function rHome(si) {
       '<div class="m bad"><span class="sub">معرّض للضياع</span><b>' + money(atRisk) + ' ريال</b><span class="sub">' + overdue.length + ' تطعيم متأخر × ' + money(st.avg) + '</span></div></div>'
       : '<p class="sub" style="margin:0">حدد متوسط قيمة زيارة التطعيم من الإعدادات، ويطلع لك هنا الإيراد اللي رجّعته التذكيرات، والإيراد المعرض للضياع من التطعيمات المتأخرة.</p><div class="row"><button class="btn sm" data-go="set">تحديده الآن</button></div>') + '</div>';
   left += '<div class="card"><h2>اختصارات</h2><div class="quick">' +
-    [['send', 'send', 'أرسل التذكيرات'], ['newAppt', 'appt', 'حجز موعد'], ['newCust', 'cust', 'عميل جديد'], ['camp', 'camp', 'حملة جديدة'], ['card', 'card', 'بطاقة إعلانية'], ['imp', 'imp', 'استيراد عملاء']]
+    [['send', 'send', 'أرسل التذكيرات'], ['newAppt', 'appt', 'حجز موعد'], ['quick', 'cust', 'زيارة سريعة'], ['camp', 'camp', 'حملة جديدة'], ['card', 'card', 'بطاقة إعلانية'], ['imp', 'imp', 'استيراد عملاء']]
       .map(([k, i, l]) => (['send', 'camp', 'card', 'imp'].indexOf(k) > -1 ? '<button data-go="' + k + '">' : '<button data-act="' + k + '">') + ico(i) + l + '</button>').join('') + '</div></div>';
 
   // العمود الأيسر: اليوم
@@ -842,7 +879,7 @@ function group(title, list) {
   return '<div class="card"><h2>' + title + ' <span class="n">' + list.length + '</span></h2>' + list.map(i => {
     const k = esc(i.key);
     return '<div class="item"><div><div class="t">' + esc(i.p ? i.p.name : i.c.name) + ' · <span style="font-weight:500">' + esc(i.title) + '</span> ' + (i.type === 'renew' ? '<span class="chip c-gold">باقة</span>' : '') + '</div>' +
-      '<div class="sub"><a href="#" data-act="openCust" data-id="' + esc(i.c.id) + '" style="color:inherit">' + esc(i.c.name) + '</a> · <span class="ltr">' + showPhone(i.c.phone) + '</span> · ' + ar(i.due) + '</div></div>' + (i.chip || whenChip(i.diff)) +
+      '<div class="sub"><a href="#" data-act="openCust" data-id="' + esc(i.c.id) + '" style="color:inherit">' + esc(i.c.name) + '</a> · ' + phoneLink(i.c.phone) + ' · ' + ar(i.due) + '</div></div>' + (i.chip || whenChip(i.diff)) +
       (ui.open[i.key] ? '<pre class="msg" style="grid-column:1/-1">' + esc(i.msg) + '</pre>' : '') +
       '<div class="acts">' + (apiReady(i.tk) ? '<button class="btn wa" data-act="apiSend" data-k="' + k + '">إرسال تلقائي</button><a class="btn sm gh" href="' + esc(wa(i.c.phone, i.msg)) + '" target="_blank" rel="noopener" data-send="' + k + '">يدوي</a>'
         : '<a class="btn wa" href="' + esc(wa(i.c.phone, i.msg)) + '" target="_blank" rel="noopener" data-send="' + k + '">إرسال واتساب</a>') +
@@ -866,7 +903,7 @@ function rCust() {
   let list = D.customers.filter(c => !q || (qd.length >= 3 && c.phone.includes(qd)) || c.name.includes(q) || (petsBy.get(c.id) || []).some(p => p.name.includes(q)));
   list = list.slice().sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   const shown = list.slice(0, 150);
-  let h = '<div class="head"><div><h1>العملاء</h1><p class="sub">' + D.customers.length + ' عميل · ' + D.pets.length + ' حيوان</p></div><div class="row"><button class="btn" data-act="impXlsxTpl">قالب الاستيراد</button><button class="btn" data-act="impFile">استيراد</button><button class="btn" data-act="exportCust">تصدير Excel</button><button class="btn pri" data-act="newCust">عميل جديد</button></div></div>' + banners();
+  let h = '<div class="head"><div><h1>العملاء</h1><p class="sub">' + D.customers.length + ' عميل · ' + D.pets.length + ' حيوان</p></div><div class="row"><button class="btn" data-act="impXlsxTpl">قالب الاستيراد</button><button class="btn" data-act="impFile">استيراد</button><button class="btn" data-act="exportCust">تصدير Excel</button><button class="btn" data-act="quick">زيارة سريعة</button><button class="btn pri" data-act="newCust">عميل جديد</button></div></div>' + banners();
   h += '<input id="q" class="msearch" type="search" placeholder="بحث بالاسم أو الجوال أو اسم الحيوان" value="' + esc(ui.q) + '">';
   if (!shown.length) return h + '<div class="card empty">' + (D.customers.length ? 'ما فيه نتائج. جرّب جزء من الاسم أو آخر أرقام الجوال.' : 'ما فيه عملاء للآن. أضف أول عميل أو استورد ملف.') + '</div>';
   h += '<div class="tw"><table><thead><tr><th>العميل</th><th>الجوال</th><th>الحيوانات</th><th>التذكيرات</th><th>الدعاية</th><th>باقة</th></tr></thead><tbody>' + shown.map(c =>
@@ -881,7 +918,7 @@ function rCustDetail(c) {
   const subs = D.subs.filter(s => s.custId === c.id).sort((a, b) => b.start.localeCompare(a.start));
   const log = D.log.filter(l => l.custId === c.id).slice(-12).reverse();
   let h = '<div class="row sp"><button class="btn gh" data-act="back">→ كل العملاء</button><div class="row"><a class="btn wa sm" href="' + wa(c.phone) + '" target="_blank" rel="noopener">محادثة واتساب</a><button class="btn sm" data-act="editCust" data-id="' + c.id + '">تعديل</button></div></div>';
-  h += '<div class="card"><div class="row sp"><div><h1>' + esc(c.name) + '</h1><span class="sub ltr">' + showPhone(c.phone) + '</span></div><div class="row">' +
+  h += '<div class="card"><div class="row sp"><div><h1>' + esc(c.name) + '</h1><span class="sub">' + phoneLink(c.phone) + ' <button class="btn sm gh" data-act="copyText" data-t="' + localPhone(c.phone) + '">نسخ الرقم</button></span></div><div class="row">' +
     '<button class="btn sm" data-act="toggle" data-f="remind" data-id="' + c.id + '">' + (c.remind ? '✓ ' : '') + 'التذكيرات' + (c.remind ? '' : ': غير موافق') + '</button>' +
     '<button class="btn sm" data-act="toggle" data-f="promo" data-id="' + c.id + '">' + (c.promo ? '✓ ' : '') + 'الدعاية' + (c.promo ? '' : ': غير موافق') + '</button></div></div>' +
     (c.notes ? '<p class="sub" style="margin:0">' + esc(c.notes) + '</p>' : '') + '</div>';
@@ -927,16 +964,116 @@ function subCard(s, K) {
   if (stt !== 'ملغي') h += '<div class="row">' + (renewedLater(s) ? '<span class="sub">تم تجديده</span>' : '<button class="btn sm gold" data-act="renew" data-id="' + s.id + '">تجديد</button>') + (stt !== 'منتهي' ? '<button class="btn sm gh dan" data-act="cancelSub" data-id="' + s.id + '">إلغاء الاشتراك</button>' : '') + '</div>';
   return h + '</div>';
 }
+/* ================= الإدخال السريع ================= */
+const custByPhone = raw => { const ph = normPhone(raw); return ph ? D.customers.find(c => c.phone === ph) || null : null; };
+function custMatches(q) {
+  q = String(q || '').trim(); if (!q) return [];
+  const qd = digits(q).replace(/[^\d]/g, '').replace(/^0/, '');
+  return D.customers.filter(c => (qd.length >= 3 && c.phone.includes(qd)) || c.name.includes(q) || D.pets.some(p => p.custId === c.id && p.name.includes(q)));
+}
+const phoneLink = p => p ? '<a class="ltr tel" href="tel:+' + p + '">' + showPhone(p) + '</a>' : '';
+// التطعيمات المستحقة للحيوان (متأخرة أو خلال 30 يوم) تنعلّم من نفسها
+function dueVaccines(p) {
+  if (!p || !p.id) return [];
+  return latestVacs().filter(v => v.petId === p.id).filter(v => { const d = vacDue(v); return d && daysTo(d) <= 30; }).map(v => v.vaccine);
+}
+function vacTypesFor(species) { const t = D.types.filter(x => x.fits === 'الكل' || x.fits === species); return t.length ? t : D.types; }
+function vacPicker(species, preset) {
+  const sel = new Set(preset || []);
+  return '<div class="full"><span class="sub">التطعيمات اللي انعطت اليوم (اختر واحد أو أكثر)</span><div class="vpick">' +
+    vacTypesFor(species).map(t => '<label class="vchk"><input type="checkbox" name="vx" value="' + esc(t.name) + '" data-days="' + t.days + '"' + (sel.has(t.name) ? ' checked' : '') + '><span>' + esc(t.name) + '</span></label>').join('') +
+    '</div></div><div class="vrows full"></div>' +
+    '<label class="f">تاريخ الإعطاء<input type="date" name="given" value="' + today() + '" max="' + today() + '"></label>' +
+    '<label class="f">الطبيب البيطري<input name="vet" list="vetList" value="' + esc(lastVet()) + '"><datalist id="vetList">' + vetNames().map(n => '<option value="' + esc(n) + '">').join('') + '</datalist></label>';
+}
+// صفوف الموعد القادم وبيانات الدفتر لكل تطعيم مختار، مع الإبقاء على اللي انكتب
+function vacRows(form) {
+  const box = form.querySelector('.vrows'); if (!box) return;
+  const keep = {}; box.querySelectorAll('input').forEach(i => { keep[i.name] = i.value; keep[i.name + ':edited'] = i.dataset.edited; });
+  const given = (form.given && form.given.value) || today();
+  const picked = [...form.querySelectorAll('input[name=vx]:checked')];
+  if (!picked.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="vtab">' + picked.map(ch => {
+    const n = ch.value, k = 'next:' + n, calc = addDays(given, +ch.dataset.days);
+    const nv = keep[k + ':edited'] ? keep[k] : calc;
+    return '<div class="vr"><b>' + esc(n) + '</b><label>القادم<input type="date" name="' + esc(k) + '" value="' + nv + '"' + (keep[k + ':edited'] ? ' data-edited="1"' : '') + '></label></div>';
+  }).join('') + '</div><details class="more"><summary>بيانات الدفتر: الشركة ورقم التشغيلة (اختياري)</summary><div class="form">' +
+    picked.map(ch => { const n = ch.value; return '<label class="f">' + esc(n) + ': الشركة واسم اللقاح<input name="' + esc('maker:' + n) + '" value="' + esc(keep['maker:' + n] || '') + '"></label><label class="f">رقم التشغيلة<input class="ltr" name="' + esc('batch:' + n) + '" value="' + esc(keep['batch:' + n] || '') + '"></label>'; }).join('') +
+    '</div></details>';
+  if (Object.keys(keep).some(k => k.startsWith('maker:') || k.startsWith('batch:')) && Object.entries(keep).some(([k, v]) => (k.startsWith('maker:') || k.startsWith('batch:')) && v)) box.querySelector('details').open = true;
+}
+function saveVaccines(f, petId) {
+  const given = f.given ? f.given.value : today(), picked = [...f.querySelectorAll('input[name=vx]:checked')];
+  if (!picked.length) return 0;
+  if (!given) throw 'حدد تاريخ الإعطاء';
+  if (daysTo(given) > 0) throw 'تاريخ الإعطاء ما يصير في المستقبل';
+  const rows = picked.map(ch => {
+    const n = ch.value, ty = typeOf(n), get = k => { const el = f.querySelector('[name="' + CSS.escape(k + n) + '"]'); return el ? el.value.trim() : ''; };
+    const next = get('next:') || addDays(given, ty ? ty.days : 365);
+    if (dnum(next) <= dnum(given)) throw 'الموعد القادم لـ«' + n + '» لازم يكون بعد تاريخ الإعطاء';
+    return { id: uid('V'), petId, vaccine: n, given, next, source: next === addDays(given, ty ? ty.days : 365) ? 'محسوب' : 'الطبيب', created: today(), maker: get('maker:'), batch: get('batch:'), vet: f.vet ? f.vet.value.trim() : '' };
+  });
+  rows.forEach(r => D.vacs.push(r));
+  return rows.length;
+}
+// إذا عنده موعد محجوز اليوم لنفس الحيوان يتسجل حضوره
+function markTodayVisit(custId, petId) {
+  const a = (D.appts || []).find(x => x.custId === custId && x.day === today() && x.status === 'محجوز' && (!x.petId || !petId || x.petId === petId));
+  if (a) { a.status = 'حضر'; return true; }
+  return false;
+}
+function quickForm(prefill) {
+  return '<h2>زيارة سريعة</h2><p class="sub" style="margin:-6px 0 0">ابدأ بالجوال: إذا العميل مسجل يطلع ملفه وحيواناته، وإذا جديد تكتب اسمه.</p>' +
+    '<form class="form" data-form="quick"><label class="f full">جوال العميل<input name="qphone" inputmode="tel" class="ltr" placeholder="05xxxxxxxx" autocomplete="off" value="' + esc(prefill || '') + '"></label>' +
+    '<div class="qdyn full"></div>' +
+    '<div class="row full"><button class="btn pri" type="submit">حفظ الزيارة</button><button class="btn gh" type="button" data-act="close">إلغاء</button></div></form>';
+}
+// يعيد رسم الجزء المتغير من الزيارة السريعة حسب الجوال والحيوان المختار
+function qDyn(form, force) {
+  const box = form.querySelector('.qdyn'), raw = form.qphone.value, ph = normPhone(raw), c = ph ? D.customers.find(x => x.phone === ph) : null;
+  const sig = (ph || '') + '|' + (c ? c.id : '');
+  if (!force && box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  if (!ph) { box.innerHTML = digits(raw).replace(/\D/g, '').length >= 9 ? '<span class="sub" style="color:var(--over)">صيغة الجوال غير صحيحة. مثال: 0551234567</span>' : ''; return; }
+  let h = '';
+  if (c) {
+    const pets = D.pets.filter(p => p.custId === c.id);
+    h += '<div class="qfound"><b>' + esc(c.name) + '</b><span class="sub">عميل مسجل · ' + pets.length + ' حيوان</span></div><input type="hidden" name="qcust" value="' + c.id + '">';
+    h += '<div class="full"><span class="sub">الحيوان</span><div class="vpick">' + pets.map((p, i) => '<label class="vchk"><input type="radio" name="qpet" value="' + p.id + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(p.name) + ' <small>' + esc(p.species) + '</small></span></label>').join('') +
+      '<label class="vchk"><input type="radio" name="qpet" value="new"' + (pets.length ? '' : ' checked') + '><span>+ حيوان جديد</span></label></div></div>';
+  } else {
+    h += '<div class="qfound new"><b>عميل جديد</b><span class="sub">الرقم مو مسجل</span></div>' +
+      '<div class="form full"><label class="f">اسم العميل<input name="qname" required></label>' +
+      '<label class="ck"><input type="checkbox" name="qremind" checked> يوافق على التذكيرات</label><label class="ck"><input type="checkbox" name="qpromo"> يوافق على الدعاية</label></div>' +
+      '<input type="hidden" name="qpet" value="new">';
+  }
+  h += '<div class="qpetnew form full"></div><div class="qvac form full"></div>';
+  box.innerHTML = h;
+  qPet(form);
+  const nm = form.qname; if (nm) nm.focus();
+}
+function qPet(form) {
+  const sel = form.querySelector('input[name=qpet]:checked') || form.querySelector('input[name=qpet]'), isNew = !sel || sel.value === 'new';
+  const wrap = form.querySelector('.qpetnew'), vac = form.querySelector('.qvac');
+  const pet = isNew ? null : D.pets.find(p => p.id === sel.value);
+  const prevSp = form.qspecies ? form.qspecies.value : 'قطط';
+  wrap.innerHTML = isNew ? '<label class="f">اسم الحيوان<input name="qpname"></label><label class="f">النوع<select name="qspecies">' + SPECIES.map(s => '<option' + (s === prevSp ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label>' +
+    '<label class="f">الجنس<select name="qsex"><option value="">—</option><option>ذكر</option><option>أنثى</option></select></label>' : '';
+  vac.innerHTML = vacPicker(pet ? pet.species : prevSp, dueVaccines(pet));
+  vacRows(form);
+}
+
 function custForm(c) {
   c = c || { name: '', phone: '', remind: true, promo: false, notes: '' };
   return '<h2>' + (c.id ? 'تعديل بيانات العميل' : 'عميل جديد') + '</h2><form class="form" data-form="cust" data-id="' + (c.id || '') + '">' +
     '<label class="f">الاسم<input name="name" required value="' + esc(c.name) + '"></label>' +
-    '<label class="f">الجوال<input name="phone" required inputmode="tel" class="ltr" placeholder="05xxxxxxxx" value="' + esc(localPhone(c.phone)) + '"></label>' +
+    '<label class="f">الجوال<input name="phone" required inputmode="tel" class="ltr" placeholder="05xxxxxxxx" value="' + esc(localPhone(c.phone)) + '"></label><div class="duphint full" hidden></div>' +
     '<label class="ck full"><input type="checkbox" name="remind" ' + (c.remind ? 'checked' : '') + '> موافق على رسائل التذكير (تطعيمات وتجديد)</label>' +
     '<label class="ck full"><input type="checkbox" name="promo" ' + (c.promo ? 'checked' : '') + '> موافق على الرسائل الدعائية</label>' +
+    '<details class="more"' + (c.city || c.address || c.notes ? ' open' : '') + '><summary>بيانات إضافية (اختياري)</summary><div class="form">' +
     '<label class="f">المدينة<input name="city" value="' + esc(c.city || '') + '"></label>' +
     '<label class="f">العنوان<input name="address" value="' + esc(c.address || '') + '"></label>' +
-    '<label class="f full">ملاحظات<input name="notes" value="' + esc(c.notes) + '"></label>' +
+    '<label class="f full">ملاحظات<input name="notes" value="' + esc(c.notes) + '"></label></div></details>' +
     '<div class="row full"><button class="btn pri" type="submit">حفظ</button><button class="btn gh" type="button" data-act="close">إلغاء</button></div></form>';
 }
 function petForm(p, custId) {
@@ -944,8 +1081,9 @@ function petForm(p, custId) {
   return '<h2>' + (p.id ? 'تعديل الحيوان' : 'إضافة حيوان') + '</h2><form class="form" data-form="pet" data-id="' + (p.id || '') + '" data-cust="' + (custId || p.custId) + '">' +
     '<label class="f">الاسم<input name="name" required value="' + esc(p.name) + '"></label>' +
     '<label class="f">النوع<select name="species">' + SPECIES.map(s => '<option' + (s === p.species ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label>' +
-    '<label class="f">السلالة<input name="breed" value="' + esc(p.breed) + '"></label>' +
     '<label class="f">الجنس<select name="sex"><option value="">—</option>' + ['ذكر', 'أنثى'].map(s => '<option' + (s === p.sex ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label>' +
+    '<details class="more"' + (p.id ? ' open' : '') + '><summary>بيانات إضافية للدفتر (اختياري)</summary><div class="form">' +
+    '<label class="f">السلالة<input name="breed" value="' + esc(p.breed) + '"></label>' +
     '<label class="f">تاريخ الميلاد<input type="date" name="birth" max="' + today() + '" value="' + esc(p.birth) + '"></label>' +
     '<label class="f">الوزن (كجم)<input name="weight" inputmode="decimal" value="' + esc(p.weight) + '"></label>' +
     '<label class="f">اللون ونوع الفراء<input name="color" value="' + esc(p.color || '') + '"></label>' +
@@ -957,22 +1095,14 @@ function petForm(p, custId) {
     '<label class="f">رقم الوشم<input name="tattoo" class="ltr" value="' + esc(p.tattoo || '') + '"></label>' +
     '<label class="f">تاريخ الوشم<input type="date" name="tattooDate" value="' + esc(p.tattooDate || '') + '"></label>' +
     '<div class="row full"><input type="hidden" name="photo" value="' + esc(p.photo || '') + '"><img class="thumb" id="petThumb" alt="صورة الحيوان"' + (p.photo ? ' src="' + esc(p.photo) + '"' : ' hidden') + '>' +
-    '<button class="btn sm" type="button" data-act="petPhoto">' + (p.photo ? 'تغيير الصورة' : 'إضافة صورة الحيوان') + '</button>' + (p.photo ? '<button class="btn sm gh" type="button" data-act="petPhotoDel">إزالة الصورة</button>' : '') + '</div>' +
+    '<button class="btn sm" type="button" data-act="petPhoto">' + (p.photo ? 'تغيير الصورة' : 'إضافة صورة الحيوان') + '</button>' + (p.photo ? '<button class="btn sm gh" type="button" data-act="petPhotoDel">إزالة الصورة</button>' : '') + '</div></div></details>' +
     '<div class="row full"><button class="btn pri" type="submit">حفظ</button><button class="btn gh" type="button" data-act="close">إلغاء</button>' + (p.id ? '<button class="btn gh dan" type="button" data-act="delPet" data-id="' + p.id + '">حذف الحيوان</button>' : '') + '</div></form>';
 }
 function vetNames() { const s = new Set(); if (D.settings.vet) s.add(D.settings.vet); D.vacs.forEach(v => { if (v.vet) s.add(v.vet); }); return [...s]; }
 function lastVet() { for (let i = D.vacs.length - 1; i >= 0; i--) if (D.vacs[i].vet) return D.vacs[i].vet; return D.settings.vet || ''; }
-function vacForm(p) {
-  let types = D.types.filter(t => t.fits === 'الكل' || t.fits === p.species); if (!types.length) types = D.types;
-  const t0 = types[0], g = today();
-  return '<h2>تسجيل تطعيم لـ' + esc(p.name) + '</h2><form class="form" data-form="vac" data-id="' + p.id + '">' +
-    '<label class="f">التطعيم<select name="vaccine">' + types.map(t => '<option data-days="' + t.days + '">' + esc(t.name) + '</option>').join('') + '</select></label>' +
-    '<label class="f">تاريخ الإعطاء<input type="date" name="given" value="' + g + '" max="' + g + '" required></label>' +
-    '<label class="f">الموعد القادم<input type="date" name="next" value="' + (t0 ? addDays(g, t0.days) : '') + '" required></label>' +
-    '<label class="f">الشركة المصنعة واسم اللقاح التجاري<input name="maker" placeholder="مثال: Nobivac Tricat" value=""></label>' +
-    '<label class="f">رقم التشغيلة<input name="batch" class="ltr" value=""></label>' +
-    '<label class="f">الطبيب البيطري<input name="vet" list="vetList" value="' + esc(lastVet()) + '"><datalist id="vetList">' + vetNames().map(n => '<option value="' + esc(n) + '">').join('') + '</datalist></label>' +
-    '<p class="sub full" style="margin:0">الموعد القادم يتحسب من مدة التطعيم، والطبيب يقدر يغيّره حسب عمر الحيوان وحالته. الشركة ورقم التشغيلة يظهرون في دفتر التطعيمات.</p>' +
+function vacForm(p, preset) {
+  return '<h2>تسجيل تطعيم لـ' + esc(p.name) + '</h2><form class="form" data-form="vac" data-id="' + p.id + '">' + vacPicker(p.species, preset || dueVaccines(p)) +
+    '<p class="sub full" style="margin:0">الموعد القادم يتحسب من مدة كل تطعيم، والطبيب يقدر يغيّره. التطعيمات المستحقة للحيوان تنعلّم من نفسها.</p>' +
     '<div class="row full"><button class="btn pri" type="submit">حفظ التطعيم</button><button class="btn gh" type="button" data-act="close">إلغاء</button></div></form>';
 }
 function subForm(custId) {
@@ -1020,7 +1150,8 @@ function rCamp() {
     (d.aud === 'inactive' ? '<label class="f">بدون زيارة منذ (يوم)<input id="dDays" type="number" min="7" value="' + esc(d.days) + '"></label>' : '') +
     '<label class="f">نوع الحيوان<select id="dSpecies"><option value="">الكل</option>' + SPECIES.map(s => '<option' + (s === d.species ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></label></div>' +
     '<div class="row sp"><span><b class="num">' + list.length + '</b> عميل مستهدف · المتبقي من حد الشهر ' + Math.max(0, left) + '</span>' +
-    '<button class="btn pri" data-act="startCamp"' + (list.length && promo ? '' : ' disabled') + '>بدء الحملة</button></div>' +
+    '<button class="btn pri" data-act="startCamp"' + (list.length && promo && !/\[[^\]]*\]/.test(promo.text) ? '' : ' disabled') + '>بدء الحملة</button></div>' +
+    (promo && /\[[^\]]*\]/.test(promo.text) ? '<div class="banner red"><span><b>القالب ناقص.</b> فيه نص بين [ ] لازم تكتب مكانه التفاصيل الفعلية قبل الإرسال.</span><button class="btn sm" data-act="editPromo" data-id="' + promo.id + '">تعديل القالب</button></div>' : '') +
     (list.length > left ? '<div class="banner red"><span>عدد المستهدفين أكبر من المتبقي في الحد الشهري. ضيّق الجمهور أو استخدم قائمة بث.</span></div>' : '') +
     (promo && list[0] ? '<span class="sub">معاينة لأول عميل:</span><pre class="msg">' + esc(promoMsg(promo, list[0], d.species)) + '</pre>' : '') +
     (!list.length ? '<span class="sub">ما فيه عملاء بهذا الجمهور. تأكد أن العملاء موافقين على الدعاية من ملفاتهم.</span>' : '') + '</div>';
@@ -1726,7 +1857,7 @@ function apptRow(a) {
   const c = D.customers.find(x => x.id === a.custId) || { name: '—' }, p = D.pets.find(x => x.id === a.petId);
   const past = daysTo(a.day) < 0 || (daysTo(a.day) === 0 && a.time < new Date().toTimeString().slice(0, 5));
   return '<div class="item"><div><div class="t"><span class="ltr">' + timeAr(a.time) + '</span> · ' + esc(p ? p.name : c.name) + ' <span style="font-weight:500">· ' + esc(a.service || 'زيارة') + '</span></div>' +
-    '<div class="sub"><a href="#" data-act="openCust" data-id="' + esc(a.custId) + '" style="color:inherit">' + esc(c.name) + '</a> · ' + ar(a.day) + (c.phone ? ' · <span class="ltr">' + showPhone(c.phone) + '</span>' : '') + (a.notes ? ' · ' + esc(a.notes) : '') + '</div></div>' +
+    '<div class="sub"><a href="#" data-act="openCust" data-id="' + esc(a.custId) + '" style="color:inherit">' + esc(c.name) + '</a> · ' + ar(a.day) + (c.phone ? ' · ' + phoneLink(c.phone) : '') + (a.notes ? ' · ' + esc(a.notes) : '') + '</div></div>' +
     '<span class="chip ' + APPT_CLS[a.status] + '">' + (a.status === 'محجوز' && past ? 'بانتظار التسجيل' : a.status) + '</span>' +
     '<div class="acts">' + (a.status === 'محجوز' ? '<button class="btn sm" data-act="apptSt" data-s="حضر" data-id="' + a.id + '">حضر</button><button class="btn sm" data-act="apptSt" data-s="لم يحضر" data-id="' + a.id + '">لم يحضر</button><button class="btn sm gh" data-act="apptSt" data-s="ملغي" data-id="' + a.id + '">إلغاء</button>' : '<button class="btn sm gh" data-act="apptSt" data-s="محجوز" data-id="' + a.id + '">إرجاع لمحجوز</button>') +
     '<button class="btn sm gh" data-act="editAppt" data-id="' + a.id + '">تعديل</button></div></div>';
@@ -1737,7 +1868,10 @@ function apptForm(a, custId, petId) {
   const svcs = new Set(['كشف عام', 'متابعة', 'تطعيم']); D.types.forEach(t => svcs.add(t.name)); D.packages.forEach(k => k.services.forEach(s => svcs.add(s.name)));
   return '<h2>' + (a.id ? 'تعديل الموعد' : 'موعد جديد') + '</h2><form class="form" data-form="appt" data-id="' + (a.id || '') + '" data-cust="' + (c ? c.id : '') + '">' +
     (c ? '<label class="f full">العميل<input value="' + esc(c.name) + '" disabled></label>' :
-      '<label class="f full">العميل<input name="cust" list="custList" placeholder="اكتب الاسم أو الجوال واختر من القائمة" required><datalist id="custList">' + D.customers.map(x => '<option value="' + esc(x.name + ' — ' + localPhone(x.phone)) + '">').join('') + '</datalist></label>') +
+      '<label class="f full">العميل<input name="cust" list="custList" placeholder="اكتب الاسم أو الجوال واختر من القائمة" autocomplete="off"><datalist id="custList">' + D.customers.map(x => '<option value="' + esc(x.name + ' — ' + localPhone(x.phone)) + '">').join('') + '</datalist></label>' +
+      '<div class="ncust full" hidden><div class="qfound new"><b>عميل جديد</b><span class="sub">ما لقيته في القائمة، عبّي بياناته ويتسجل مع الموعد</span></div><div class="form">' +
+      '<label class="f">اسم العميل<input name="ncname"></label><label class="f">جواله<input name="ncphone" class="ltr" inputmode="tel" placeholder="05xxxxxxxx"></label>' +
+      '<label class="f">اسم الحيوان (اختياري)<input name="ncpet"></label><label class="f">النوع<select name="ncspecies">' + SPECIES.map(x => '<option>' + x + '</option>').join('') + '</select></label></div></div>') +
     '<label class="f">الحيوان<select name="pet"><option value="">—</option>' + pets.map(p => '<option value="' + p.id + '"' + (p.id === a.petId ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select></label>' +
     '<label class="f">الخدمة<input name="service" list="svcList" value="' + esc(a.service) + '"><datalist id="svcList">' + [...svcs].map(x => '<option value="' + esc(x) + '">').join('') + '</datalist></label>' +
     '<label class="f">اليوم<input type="date" name="day" value="' + esc(a.day) + '" required></label>' +
@@ -2353,7 +2487,14 @@ document.addEventListener('click', e => {
     }
     case 'newAppt': modal(apptForm(null, id || '', b.dataset.pet || '')); break;
     case 'editAppt': modal(apptForm(D.appts.find(a => a.id === id))); break;
-    case 'apptSt': { const a = D.appts.find(x => x.id === id); if (a) { a.status = b.dataset.s; save(); toast('تم: ' + a.status); render(); } break; }
+    case 'apptSt': {
+      const a = D.appts.find(x => x.id === id); if (!a) break;
+      a.status = b.dataset.s; save(); render();
+      const pt = a.petId && D.pets.find(x => x.id === a.petId), ty = typeOf(a.service);
+      if (a.status === 'حضر' && pt && (ty || /تطعيم|ديدان|براغيث|سعار/.test(a.service || ''))) { modal(vacForm(pt, ty ? [ty.name] : null)); toast('حضر · سجّل التطعيم اللي انعطى'); }
+      else toast('تم: ' + a.status);
+      break;
+    }
     case 'delAppt': arm(b, () => { D.appts = D.appts.filter(a => a.id !== id); save(); closeModal(); render(); toast('تم حذف الموعد'); }); break;
     case 'exportRep': exportReport(); break;
     case 'quickCamp': { const promo = D.promos.find(p => p.name === 'وحشتنا') || D.promos[0]; ui.draft = { promoId: promo ? promo.id : '', aud: b.dataset.aud, species: '', days: 90 }; go('camp'); break; }
@@ -2361,6 +2502,8 @@ document.addEventListener('click', e => {
     case 'openCust': ui.view = 'cust'; ui.custId = id; render(); window.scrollTo(0, 0); break;
     case 'back': ui.custId = null; ui.campId = null; render(); break;
     case 'newCust': modal(custForm()); break;
+    case 'quick': modal(quickForm(b.dataset.ph || '')); break;
+    case 'openCustM': closeModal(); ui.view = 'cust'; ui.custId = id; ui.q = ''; render(); window.scrollTo(0, 0); break;
     case 'editCust': modal(custForm(C)); break;
     case 'toggle': if (C) { C[b.dataset.f] = !C[b.dataset.f]; save(); render(); } break;
     case 'delCust': arm(b, () => { const pets = new Set(D.pets.filter(p => p.custId === id).map(p => p.id)); D.vacs = D.vacs.filter(v => !pets.has(v.petId)); D.pets = D.pets.filter(p => p.custId !== id); D.subs = D.subs.filter(s => s.custId !== id); D.customers = D.customers.filter(c => c.id !== id); save(); ui.custId = null; toast('تم حذف العميل'); render(); }); break;
@@ -2388,6 +2531,7 @@ document.addEventListener('click', e => {
     case 'startCamp': {
       const d = ui.draft, promo = D.promos.find(p => p.id === d.promoId), list = audience(d);
       if (!promo || !list.length) break;
+      if (/\[[^\]]*\]/.test(promo.text)) { toast('القالب فيه نص بين [ ] ما تعدّل. عدّل القالب أول.', 1); break; }
       const cp = { id: uid('X'), name: promo.name + ' · ' + ar(today()), promoId: promo.id, text: promo.text, aud: d.aud, species: d.species, day: today(), recipients: list.map(c => c.id) };
       D.campaigns.push(cp); save(); ui.campId = cp.id; render(); window.scrollTo(0, 0); break;
     }
@@ -2454,8 +2598,21 @@ document.addEventListener('click', e => {
     case 'clearAll': arm(b, () => { const w = D.wa; D = defaults(); D.wa = w; save(); toast('تم مسح كل البيانات'); go('home'); }); break;
   }
 });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !(e.target.id === 'gq' || e.target.id === 'q')) return;
+  const val = e.target.value, m = custMatches(val);
+  if (m.length === 1) { e.preventDefault(); ui.view = 'cust'; ui.custId = m[0].id; ui.q = ''; e.target.blur(); render(); window.scrollTo(0, 0); }
+  else if (!m.length && normPhone(val)) { e.preventDefault(); e.target.blur(); modal(quickForm(val)); }
+});
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.name === 'qphone') { qDyn(t.form); return; }
+  if (t.name && t.name.startsWith('next:')) { t.dataset.edited = '1'; return; }
+  if (t.name === 'phone' && t.form && t.form.dataset.form === 'cust') {
+    const hint = t.form.querySelector('.duphint'), c = custByPhone(t.value);
+    if (hint) { if (c && c.id !== t.form.dataset.id) { hint.hidden = false; hint.innerHTML = '<div class="qfound"><b>هذا الرقم لـ' + esc(c.name) + '</b><button class="btn sm" type="button" data-act="openCustM" data-id="' + c.id + '">فتح ملفه</button></div>'; } else hint.hidden = true; }
+    return;
+  }
   if (t.id === 'gq') { ui.q = t.value; if (ui.view !== 'cust' || ui.custId) { ui.view = 'cust'; ui.custId = null; window.scrollTo(0, 0); } render(); return; }
   if (t.id === 'q') { ui.q = t.value; const pos = t.selectionStart; render(); const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos); return; }
   if (t.id === 'impText') { ui.impText = t.value; return; }
@@ -2495,16 +2652,18 @@ document.addEventListener('change', e => {
     else ty.fits = t.value;
     save(); toast('تم الحفظ'); return;
   }
-  const vf = t.closest('form[data-form="vac"]');
-  if (vf && (t.name === 'vaccine' || t.name === 'given')) {
-    const opt = vf.vaccine.selectedOptions[0];
-    if (opt && vf.given.value) vf.next.value = addDays(vf.given.value, +opt.dataset.days);
-  }
+  const vfm = t.closest('form');
+  if (vfm && (t.name === 'vx' || t.name === 'given') && vfm.querySelector('.vrows')) { vacRows(vfm); return; }
+  if (vfm && t.name && t.name.startsWith('next:')) { t.dataset.edited = '1'; return; }
+  if (vfm && t.name === 'qpet') { qPet(vfm); return; }
+  if (vfm && t.name === 'qspecies') { vfm.querySelector('.qvac').innerHTML = vacPicker(t.value, []); vacRows(vfm); return; }
   const af = t.closest('form[data-form="appt"]');
   if (af && t.name === 'cust') {
     const q = t.value, ph = normPhone((q.match(/0?5[\d\s]{8,}/) || [''])[0]);
     const c = (ph && D.customers.find(x => x.phone === ph)) || D.customers.find(x => x.name === q.split(' — ')[0].trim());
     af.pet.innerHTML = '<option value="">—</option>' + (c ? D.pets.filter(p => p.custId === c.id).map(p => '<option value="' + p.id + '">' + esc(p.name) + '</option>').join('') : '');
+    const box = af.querySelector('.ncust');
+    if (box) { box.hidden = !!c || !q.trim(); if (!c && q.trim()) { const qp = normPhone(q); if (qp) { if (!af.ncphone.value) af.ncphone.value = localPhone(qp); } else if (!af.ncname.value) af.ncname.value = q.trim(); } }
   }
   const sf = t.closest('form[data-form="sub"]');
   if (sf && t.name === 'pkg') sf.paid.value = sf.pkg.selectedOptions[0].dataset.price;
@@ -2519,35 +2678,56 @@ document.addEventListener('submit', e => {
       if (!phone) throw 'رقم الجوال لازم يكون جوال سعودي مثل 0551234567';
       const dup = D.customers.find(c => c.phone === phone && c.id !== f.dataset.id);
       if (dup) throw 'الرقم مسجل مسبقاً باسم ' + dup.name;
-      let c = D.customers.find(x => x.id === f.dataset.id);
+      let c = D.customers.find(x => x.id === f.dataset.id); const isNew = !c;
       if (!c) { c = { id: uid('C'), created: today() }; D.customers.push(c); }
       Object.assign(c, { name, phone, remind: f.remind.checked, promo: f.promo.checked, notes: v('notes'), city: v('city'), address: v('address') });
       if (D.sample) D.sample = false;
-      save(); closeModal(); ui.view = 'cust'; ui.custId = c.id; toast('تم الحفظ'); render();
+      save(); closeModal(); ui.view = 'cust'; ui.custId = c.id; render();
+      if (isNew) { modal(petForm(null, c.id)); toast('تم حفظ العميل، أضف حيوانه'); } else toast('تم الحفظ');
     } else if (kind === 'pet') {
       const name = v('name'); if (!name) throw 'اكتب اسم الحيوان';
       const custId = f.dataset.cust;
       if (D.pets.some(p => p.custId === custId && p.name === name && p.id !== f.dataset.id)) throw 'فيه حيوان بنفس الاسم عند هذا العميل';
-      let p = D.pets.find(x => x.id === f.dataset.id);
+      let p = D.pets.find(x => x.id === f.dataset.id); const isNewPet = !p;
       if (!p) { p = { id: uid('P'), custId }; D.pets.push(p); }
       Object.assign(p, { name, species: v('species'), breed: v('breed'), sex: v('sex'), birth: v('birth'), weight: digits(v('weight')), notes: v('notes'),
         color: v('color'), chip: digits(v('chip')), chipDate: v('chipDate'), chipLoc: v('chipLoc'), tattoo: v('tattoo'), tattooDate: v('tattooDate'), photo: f.photo ? f.photo.value : '' });
-      save(); closeModal(); toast('تم الحفظ'); render();
+      save(); closeModal(); render();
+      if (isNewPet) modal('<h2>تم حفظ «' + esc(p.name) + '»</h2><p class="sub" style="margin:0">سجّل تطعيمه الآن عشان يطلع له تذكير في موعده.</p><div class="row"><button class="btn pri" data-act="newVac" data-id="' + p.id + '">تسجيل تطعيم الآن</button><button class="btn gh" data-act="close">لاحقاً</button></div>');
+      else toast('تم الحفظ');
     } else if (kind === 'vac') {
-      const given = v('given'), next = v('next'), vaccine = v('vaccine'), ty = typeOf(vaccine);
-      if (!ty) throw 'اختر التطعيم'; if (!given) throw 'حدد تاريخ الإعطاء';
-      if (daysTo(given) > 0) throw 'تاريخ الإعطاء ما يصير في المستقبل';
-      if (!next || dnum(next) <= dnum(given)) throw 'الموعد القادم لازم يكون بعد تاريخ الإعطاء';
-      const computed = addDays(given, ty.days);
-      D.vacs.push({ id: uid('V'), petId: f.dataset.id, vaccine, given, next, source: next === computed ? 'محسوب' : 'الطبيب', created: today(), maker: v('maker'), batch: v('batch'), vet: v('vet') });
-      save(); closeModal(); toast('تم تسجيل التطعيم · القادم ' + ar(next)); render();
+      const n = saveVaccines(f, f.dataset.id); if (!n) throw 'اختر تطعيم واحد على الأقل';
+      save(); closeModal(); toast(n === 1 ? 'تم تسجيل التطعيم' : 'تم تسجيل ' + n + ' تطعيمات'); render();
+    } else if (kind === 'quick') {
+      const ph = normPhone(v('qphone')); if (!ph) throw 'اكتب جوال العميل، مثل 0551234567';
+      let c = D.customers.find(x => x.phone === ph), newC = false;
+      if (!c) { const name = v('qname'); if (!name) throw 'اكتب اسم العميل'; c = { id: uid('C'), name, phone: ph, remind: f.qremind ? f.qremind.checked : true, promo: f.qpromo ? f.qpromo.checked : false, notes: '', created: today() }; newC = true; }
+      const sel = f.querySelector('input[name=qpet]:checked') || f.querySelector('input[name=qpet]');
+      let pt = null, newP = false;
+      if (sel && sel.value !== 'new') pt = D.pets.find(x => x.id === sel.value);
+      else { const pn = v('qpname'); if (pn) { if (!newC && D.pets.some(x => x.custId === c.id && x.name === pn)) throw 'فيه حيوان بنفس الاسم عند هذا العميل'; pt = { id: uid('P'), custId: c.id, name: pn, species: v('qspecies') || 'أخرى', breed: '', sex: v('qsex'), birth: '', weight: '', notes: '' }; newP = true; } }
+      if (f.querySelectorAll('input[name=vx]:checked').length && !pt) throw 'اكتب اسم الحيوان عشان يتسجل التطعيم';
+      const nv = pt ? saveVaccines(f, pt.id) : 0;
+      if (newC) D.customers.push(c); if (newP) D.pets.push(pt);
+      const visited = markTodayVisit(c.id, pt && pt.id);
+      if (D.sample && newC) D.sample = false;
+      save(); closeModal(); ui.view = 'cust'; ui.custId = c.id; ui.q = ''; render(); window.scrollTo(0, 0);
+      toast('تم: ' + ([newC ? 'عميل جديد' : '', newP ? 'حيوان جديد' : '', nv ? nv + ' تطعيم' : '', visited ? 'تسجيل حضور الموعد' : ''].filter(Boolean).join(' · ') || 'لا تغيير'));
     } else if (kind === 'appt') {
       let custId = f.dataset.cust;
       if (!custId) {
         const q = v('cust'), ph = normPhone((q.match(/0?5[\d\s]{8,}/) || [''])[0]);
         const c = (ph && D.customers.find(x => x.phone === ph)) || D.customers.find(x => x.name === q.split(' — ')[0].trim());
-        if (!c) throw 'اختر العميل من القائمة، أو أضفه أولاً من قسم العملاء';
-        custId = c.id;
+        if (c) custId = c.id;
+        else {
+          const nph = normPhone(v('ncphone')), nn = v('ncname');
+          if (!nn || !nph) { const box = f.querySelector('.ncust'); if (box) box.hidden = false; throw 'العميل مو مسجل: اكتب اسمه وجواله في خانات العميل الجديد'; }
+          let nc = D.customers.find(x => x.phone === nph);
+          if (!nc) { nc = { id: uid('C'), name: nn, phone: nph, remind: true, promo: false, notes: '', created: today() }; D.customers.push(nc); }
+          custId = nc.id;
+          const pn = v('ncpet');
+          if (pn && !v('pet')) { let np = D.pets.find(x => x.custId === nc.id && x.name === pn); if (!np) { np = { id: uid('P'), custId: nc.id, name: pn, species: v('ncspecies') || 'أخرى', breed: '', sex: '', birth: '', weight: '', notes: '' }; D.pets.push(np); } f.pet.innerHTML = '<option value="' + np.id + '" selected></option>'; }
+        }
       }
       const day = v('day'), time = v('time'); if (!day) throw 'حدد يوم الموعد'; if (!time) throw 'حدد وقت الموعد';
       const clash = D.appts.find(a => a.id !== f.dataset.id && a.day === day && a.time === time && a.status === 'محجوز');
